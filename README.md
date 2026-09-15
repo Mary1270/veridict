@@ -48,21 +48,32 @@ Veridict's entire reason to exist is that second question:
 ## What's in this repo
 
 ```
-contract.py        the entire protocol — one GenLayer Intelligent Contract
-index.html          no-build frontend (genlayer-js via esm.sh) — open it directly
-                     or serve it from GitHub Pages, no npm/build step required
-docs/ARCHITECTURE.md full design doc: state machine, economics, disclosed
-                     limitations, and the v2 (Base + USDC + relay) roadmap
-tests/               offline pytest/unittest suite against a stub `gl` SDK
-                     (no network, no live GenLayer node needed to run these)
+contract.py            the entire protocol — one GenLayer Intelligent Contract
+contract_testing.py    same contract with shortened time windows (minutes
+                        instead of days), used only for interactive manual
+                        testing on Studio — do not deploy this one for real use
+index.html              no-build frontend (genlayer-js via esm.sh) — open it
+                         directly or serve it from GitHub Pages, no build step
+ARCHITECTURE.md          full design doc: state machine, economics, disclosed
+                         limitations, and the v2 (Base + USDC + relay) roadmap
 ```
+
+An offline pytest/unittest suite (23 tests, run against a stub `gl` SDK —
+no network or live GenLayer node needed) exercises every state-machine
+path described in `ARCHITECTURE.md` §12: verified/unverified majorities,
+ties, commit/reveal tampering, double-settlement, weight caps, and
+reputation bounds. It isn't included in this copy of the repo; the
+behavior it verifies is also confirmed live — `create_agreement` through
+`withdraw`, `register_juror`, `appeal`, `commit_vote`, and `finalize_jury`
+(including a real non-reveal slash) all ran successfully on GenLayer
+Studio's testnet.
 
 ## Design decisions, stated plainly
 
 - **Everything is GEN in v1** — agreement stakes, appeal bonds, juror
   stakes, rewards, and slashes. A USDC-denominated agreement escrow on
   Base, connected by a relay, is a documented v2 idea
-  (`docs/ARCHITECTURE.md` §15) — deferred because it needs a Solidity
+  (`ARCHITECTURE.md` §15) — deferred because it needs a Solidity
   toolchain and a live Base testnet that weren't available while this was
   being built, not because the design is wrong.
 - **One contract, not a monorepo.** Everything — escrow, Tier-1
@@ -90,7 +101,7 @@ tests/               offline pytest/unittest suite against a stub `gl` SDK
   fixed jury size (5), one appeal round (no cascading appeals),
   drand-via-`gl.nondet.web` randomness rather than a trust-minimized
   on-chain VRF, and no reputation portability across a full
-  unstake/restake cycle. Full list in `docs/ARCHITECTURE.md` §10.
+  unstake/restake cycle. Full list in `ARCHITECTURE.md` §10.
 
 ## Deploying
 
@@ -104,17 +115,19 @@ tests/               offline pytest/unittest suite against a stub `gl` SDK
    deploy from branch) to serve `index.html` — or just open the file
    directly in a browser; it has no build step and no server dependency.
 
-## Running the offline test suite
+## Testing
 
-```bash
-python3 -m unittest discover tests
-```
+An offline pytest/unittest suite (23 tests) runs against a minimal
+in-memory stub of the `gl` SDK — no network access or live GenLayer node
+required — exercising every state-machine path: happy path, appeal, jury
+selection, commit-reveal, verified/unverified majority, ties,
+double-settlement, weight caps, and reputation bounds.
 
-No network access or live GenLayer node is required — `tests/genlayer_stub`
-provides a minimal in-memory `gl` module so every state-machine path
-(happy path, appeal, jury selection, commit-reveal, verified/unverified
-majority, ties, double-settlement, weight caps, reputation bounds) is
-exercised deterministically and fast.
+The same behavior was additionally confirmed live on GenLayer Studio's
+testnet: the full happy path (create → accept → evidence → Tier-1 verdict
+→ finalize → withdraw) twice, `register_juror`, `appeal`, `commit_vote`
+(including correct rejection once its window closed), and `finalize_jury`
+resolving to a real non-reveal slash.
 
 ## License
 
